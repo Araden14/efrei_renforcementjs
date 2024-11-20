@@ -11,8 +11,12 @@ const swaggerUI = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const cors = require('cors');
 
+
+
 app.use(express.json())
-app.use(cors());
+app.use(cors({
+    origin: '*'
+}));
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', 'views/templates'); 
