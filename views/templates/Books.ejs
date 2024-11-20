@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Books</title>
+    <link href="https://cdn.jsdelivr.net/npm/@nextui-org/react@latest/dist/nextui.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        .alert {
+            width: 25%;
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        body{
+            width: 100%;
+            height: 100vh;
+            background-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+            background-size: cover;
+            background-position: center;
+            z-index: 1;
+            box-shadow: inset 0 0 0 1000px rgba(0,0,0,.2);
+
+        }
+        
+    </style>
+</head>
+<body class="bg-gray-200">
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Add a Book</h2>
+                <form id="bookForm" class="mb-8">
+                    <input type="text" id="bookLabel" placeholder="Book Label" class="border p-2 mb-2 w-full" required>
+                    <textarea id="bookDescription" placeholder="Book Description" class="border p-2 mb-2 w-full" required></textarea>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Add Book</button>
+                </form>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Book List</h2>
+                <div class="grid grid-cols-1 gap-4" id="bookList">
+                    <% Book.forEach(book => { %>
+                        <div class="bg-white shadow-lg rounded-lg p-6 flex justify-between items-center book-item">
+                            <div>
+                                <h2 class="text-2xl font-semibold mb-2"><%= book.label %></h2>
+                                <p class="text-gray-700"><%= book.description %></p>
+                            </div>
+                            <button class="delete-book text-red-500 hover:text-red-700" data-id="<%= book._id %>">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function() {
+            function showAlert(message, type) {
+                const alertHtml = `
+                    <div class="alert ${type} p-4 mb-4">
+                        <p>${message}</p>
+                    </div>
+                `;
+                $('body').prepend(alertHtml);
+                const alertElement = $('.alert').first();
+                gsap.fromTo(alertElement, {opacity: 0, y: -20}, {opacity: 1, y: 0, duration: 0.5});
+                setTimeout(() => {
+                    gsap.to(alertElement, {opacity: 0, y: -20, duration: 0.5, onComplete: function() {
+                        alertElement.remove();
+                    }});
+                }, 3000);
+            }
+
+            $('#bookForm').on('submit', function(event) {
+                event.preventDefault();
+                const bookData = {
+                    label: $('#bookLabel').val(),
+                    description: $('#bookDescription').val()
+                };
+                $.ajax({
+                    url: '/api/books',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(bookData),
+                    success: function(response) {
+                        const newBookHtml = `
+                            <div class="bg-white shadow-lg rounded-lg p-6 flex justify-between items-center book-item">
+                                <div>
+                                    <h2 class="text-2xl font-semibold mb-2">${response.book.label}</h2>
+                                    <p class="text-gray-700">${response.book.description}</p>
+                                </div>
+                                <button class="delete-book text-red-500 hover:text-red-700" data-id="${response.book._id}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                        $('#bookList').append(newBookHtml);
+                        gsap.fromTo('.book-item:last-child', {opacity: 0, y: 20}, {opacity: 1, y: 0, duration: 0.5});
+                        $('#bookLabel').val('');
+                        $('#bookDescription').val('');
+                        showAlert(`Le livre ${response.book.label} a été ajouté`, 'bg-green-100 border-l-4 border-green-500 text-green-700');
+                    },
+                    error: function(error) {
+                        console.error('Error creating book:', error);
+                        showAlert('Error adding book.', 'bg-red-100 border-l-4 border-red-500 text-red-700');
+                    }
+                });
+            });
+
+            $('#bookList').on('click', '.delete-book', function() {
+                const bookId = $(this).data('id');
+                $.ajax({
+                    url: `/api/books/${bookId}`,
+                    type: 'DELETE',
+                    success: function() {
+                        const bookElement = $(`button[data-id='${bookId}']`).closest('div');
+                        gsap.to(bookElement, {opacity: 0, y: 20, duration: 0.5, onComplete: function() {
+                            bookElement.remove();
+                        }});
+                        showAlert(`Le livre a été supprimé`, 'bg-green-100 border-l-4 border-green-500 text-green-700');
+                    },
+                    error: function(error) {
+                        console.error('Error deleting book:', error);
+                        showAlert('Error deleting book.', 'bg-red-100 border-l-4 border-red-500 text-red-700');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
