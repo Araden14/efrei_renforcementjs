@@ -1,92 +1,69 @@
-require('dotenv').config()
 const express = require ('express');
+const dotenv = require('dotenv');
+dotenv.config();
 const app = express();
 const mongoose = require('mongoose');
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@efrei-arnaud.qg8vz.mongodb.net/?retryWrites=true&w=majority&appName=efrei-arnaud`
+const booksRoutes = require('./routes/Book')
+const booksViewRoutes = require('./views/routes/Bookview')
+const authRoutes = require('./routes/Auth')
+const swaggerUI = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
+const cors = require('cors');
 
-
-let books = [
-    {
-        id: 1,
-        label: "Les miserables"
-    },
-    {
-        id:2,
-        label: "Le comte de montecristo"
-    }
-]
-
-//Parse des requetes en JSON
 app.use(express.json())
+app.use(cors());
+// View engine
+app.set('view engine', 'ejs');
+app.set('views', 'views/templates'); 
 
-mongoose
-    .connect(process.env.DATABASE_URL)
-    .then(() => {
-        console.log('Connection has been etablished successfully')
-    }).catch((error) => {
-        console.error('Unable to connect database: ', error)
-})
+// API routes
+app.use('/api/books', booksRoutes);
+app.use('/api/auth', authRoutes);
 
+// View routes
+app.use('/books', booksViewRoutes);
 
-app.get('/', (req, res) => {
-    res.send('Hello word');
-});
+// Swagger UI
 
-
-// GET /books  get all books
-app.get('/api/books', (req, res) => {
-    res.send(books)
-});
-
-// GET /books/:id  get book by id
-app.get('/api/books/:id', (req, res) => {
-    const bookId = +req.params.id
-    const book = books.find(book => book.id === bookId)
-    res.send(book)
-});
-
-const BookModel = require('./models/Book');
-// POST /books create a book
-app.post('/api/books', (req, res) => {
-
-   const newBook = new BookModel({
-       label: req.body.label,
-       description: req.body.description
-   })
-    newBook.save()
-    res.status(201);
-   res.send({
-       success: true,
-       book : newBook
-   })
-});
-
-// PUT /books update a book
-app.put('/api/books/:id', (req, res) => {
-    const bookId = +req.params.id;
-    const bookToUpdate = req.body;
-
-    books = books.map(book => {
-        if(book.id === bookId) {
-            return {
-                ...book,
-                ...bookToUpdate
+const swaggerOptions = {
+    swaggerDefinition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Book Api',
+            version: '1.0.0',
+            description: 'API for managing books and users'
+        },
+        servers: [
+            {
+                url: 'http://localhost:3000',
+                description: 'Local server'
+            },
+            {
+                url: 'https://api.example.com',
+                description: 'Production server'
             }
-        }
-        return  book
-    })
-    res.send(`Le livre ${bookId} a été mise a jour`);
-});
+        ]
+    },
+    apis: ['./routes/*.js']
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 
-// DELETE /books delete a book
-app.delete('/api/books/:id', (req, res) => {
-    const bookId = +req.params.id;
-    books = books.filter(book => book.id !== bookId)
-    res.send(`Le livre ${bookId} a bien supprimé`)
-});
+// Database connection
+mongoose.connect(uri)
+    .then(() => {
+        console.log('Connection has been established successfully');
+    }).catch((error) => {
+        console.error('Unable to connect to database: ', error.message); // Log the error message
+        console.error('Error details:', error); // Log the entire error object for more details
+    });
 
 
 
+// Server listening
 app.listen(3000, () => {
     console.log("Server is running on port 3000")
 })
