@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/jwt');
 const {
     getAllBooks,
     getBookById,
@@ -10,18 +9,18 @@ const {
 } = require('../controllers/Bookcontroller');
 
 // GET /books  get all books
-router.get('/', verifyToken, getAllBooks);
+router.get('/', getAllBooks);
 
 // GET /books/:id  get book by id
-router.get('/:id', verifyToken, getBookById);
+router.get('/:id', getBookById);
 
 // POST /books create a book
-router.post('/', verifyToken, createBook);
+router.post('/', createBook);
 
 // PUT /books update a book
-router.put('/:id', verifyToken, updateBook);
+router.put('/:id', updateBook);
 
 // DELETE /books delete a book
-router.delete('/:id', verifyToken, deleteBook);
+router.delete('/:id', deleteBook);
 
 module.exports = router; 
